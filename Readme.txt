@@ -1,4 +1,5 @@
 Cài đặt Java 17 để sử dụng ứng dụng này
+Hướng dẫn cài đặt tự động khởi động ứng dụng
 1. Copy file AppMonitor-1.0-all.jar, start.bat, start_silent.vbs vào 1 folder bất kỳ
 2. Nhấn tổ hợp phím Windows + R để mở hộp thoại Run.
 3. Gõ chính xác lệnh sau và nhấn Enter: shell:startup
