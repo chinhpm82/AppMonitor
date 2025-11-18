@@ -6,4 +6,4 @@ cd /d %~dp0
 
 :: 'javaw' dùng để chạy mà không hiện cửa sổ console đen
 :: 'java' sẽ hiện cửa sổ console
-javaw -jar AppMonitor-1.0-all.jar > NUL 2>&1
+"C:\Program Files\Java\jdk-17\bin\javaw.exe" -jar AppMonitor-1.0-all.jar > NUL 2>&1
