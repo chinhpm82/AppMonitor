@@ -36,7 +36,7 @@ application {
 
 // Cấu hình ShadowJar
 shadowJar {
-    archiveBaseName = 'RobloxMonitor' // Tên file .jar
+    archiveBaseName = 'AppMonitor' // Tên file .jar
     archiveClassifier = 'all'        // Sẽ tạo ra file: RobloxMonitor-all-1.0.0.jar
-    archiveVersion = '1.0.0'
+    archiveVersion = '1.0'
 }

@@ -21,6 +21,7 @@ out/
 gradle
 gradlew.bat
 gradlew
+backup/
 
 ### Eclipse ###
 .apt_generated
