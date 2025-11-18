@@ -6,4 +6,4 @@ cd /d %~dp0
 
 :: 'javaw' dùng để chạy mà không hiện cửa sổ console đen
 :: 'java' sẽ hiện cửa sổ console
-javaw -jar RobloxMonitor-1.0.0-all.jar > NUL 2>&1
+javaw -jar AppMonitor-1.0-all.jar > NUL 2>&1
