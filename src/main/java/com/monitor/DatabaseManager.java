@@ -180,7 +180,7 @@ public class DatabaseManager {
             sql += " AND app_name = '" + appFilter + "' ";
         }
 
-        sql += "ORDER BY start_time DESC LIMIT 10";
+        sql += "ORDER BY start_time DESC";
 
         try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {

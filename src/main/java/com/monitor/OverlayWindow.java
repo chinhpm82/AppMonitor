@@ -83,9 +83,12 @@ public class OverlayWindow extends JFrame {
             public boolean isCellEditable(int r, int c) { return false; }
         };
         sessionTable = new JTable(tableModel);
-        sessionTable.getColumnModel().getColumn(0).setPreferredWidth(90);
-        sessionTable.getColumnModel().getColumn(1).setPreferredWidth(60);
-        sessionTable.getColumnModel().getColumn(2).setPreferredWidth(60);
+        sessionTable.getColumnModel().getColumn(0).setPreferredWidth(70);
+        sessionTable.getColumnModel().getColumn(1).setPreferredWidth(70);
+        sessionTable.getColumnModel().getColumn(2).setPreferredWidth(70);
+
+        // [CẬP NHẬT] Đảm bảo bảng lấp đầy vùng nhìn để đẹp hơn
+        sessionTable.setFillsViewportHeight(true); 
 
         mainPanel.add(new JScrollPane(sessionTable), BorderLayout.CENTER);
 
