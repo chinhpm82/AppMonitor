@@ -1,0 +1,7 @@
+# 1. Build bản Release cho Windows
+flutter clean
+flutter pub get
+flutter build windows --release
+
+# 2. Biên dịch bộ cài đặt bằng Inno Setup
+& "C:\Users\admin\AppData\Local\Programs\Inno Setup 6\ISCC.exe" installer.iss

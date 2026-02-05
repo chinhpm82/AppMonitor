@@ -1,49 +1,81 @@
-.gradle
-build/
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+.metadata
+.lock
 
-### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
-*.iws
+# IntelliJ
 *.iml
 *.ipr
-out/
-!**/src/main/**/out/
-!**/src/test/**/out/
-.idea
-.gradle
-*.db
-gradle
-gradlew.bat
-gradlew
-backup/
+*.iws
+.idea/
 
-### Eclipse ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-
-### VS Code ###
+# VS Code
 .vscode/
 
-### Mac OS ###
-.DS_Store
+# Flutter/Dart/Pub
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Android
+android/app/libs/
+android/app/src/main/assets/
+android/app/src/*/res/raw/
+android/app/src/*/res/values/secrets.xml
+android/key.properties
+
+# iOS
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Flutter/app.zip
+ios/Flutter/db.sqlite3
+ios/Flutter/flutter_assets/
+ios/ServiceDefinitions.json
+ios/Runner/GeneratedPluginRegistrant.*
+
+# Windows
+windows/flutter/ephemeral/
+# windows/runner/resources/app_icon.ico  <-- This is typically source, keep it.
+
+# Linux
+linux/flutter/ephemeral/
+
+# MacOS
+macos/Flutter/ephemeral/
+
+# Web
+web/icons/Icon-192.png
+web/icons/Icon-512.png
+web/favicon.png
+
+# Java/Gradle (covering java_version folder)
+.gradle/
+**/build/
+**/bin/
+**/out/
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+!java_version/AppMonitor-1.0-all.jar  # If this is a dist file to keep, uncomment. Assuming ignored for now unless specified.
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Local configuration
+local.properties

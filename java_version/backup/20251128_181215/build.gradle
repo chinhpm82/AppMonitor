@@ -1,0 +1,42 @@
+// Plugins
+plugins {
+    // Plugin cơ bản của Java
+    id 'java'
+
+    // Plugin để tạo file .jar chạy được (phải có)
+    id 'application'
+
+    // Plugin 'shadow' để đóng gói file .jar VÀ tất cả thư viện (SQLite)
+    // vào chung 1 file duy nhất (gọi là "fat JAR" hoặc "uber-JAR")
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+// Cấu hình chung
+group = 'com.yourcompany' // Đổi tên này thành tên của bạn
+version = '1.0.0'
+sourceCompatibility = '11' // Đảm bảo dùng Java 11 (hoặc cao hơn)
+
+// Nơi Gradle tìm thư viện
+repositories {
+    mavenCentral()
+}
+
+// Danh sách thư viện cần dùng
+dependencies {
+    // Đây chính là thư viện SQLite mà chúng ta cần
+    implementation 'org.xerial:sqlite-jdbc:3.46.0.0'
+}
+
+// Chỉ định lớp (Class) chứa hàm main()
+application {
+    // 🔥 QUAN TRỌNG: Đổi 'App' thành 'com.monitor.App'
+    // nếu bạn làm theo Bước 3 (tạo package)
+    mainClass = 'com.monitor.App'
+}
+
+// Cấu hình ShadowJar
+shadowJar {
+    archiveBaseName = 'AppMonitor' // Tên file .jar
+    archiveClassifier = 'all'        // Sẽ tạo ra file: RobloxMonitor-all-1.0.0.jar
+    archiveVersion = '1.0'
+}
