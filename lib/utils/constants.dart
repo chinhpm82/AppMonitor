@@ -1,5 +1,5 @@
 class Constants {
-  static const String appTitle = 'Roblox Monitor';
+  static const String appTitle = 'MoniGuard';
   static const String robloxProcessName = 'RobloxPlayerBeta.exe';
   static const List<String> robloxKeywords = ['roblox', 'blox'];
   static const List<String> siteKeywords = ['youtube'];

@@ -50,7 +50,7 @@ class Win32Service {
     String? foundTitle;
     
     final lpEnumFunc = NativeCallable<WNDENUMPROC>.isolateLocal(
-      (hwnd, lParam) {
+      (int hwnd, int lParam) {
         final length = GetWindowTextLength(hwnd);
         if (length == 0) return TRUE;
 

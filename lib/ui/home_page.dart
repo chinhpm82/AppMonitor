@@ -15,7 +15,7 @@ class HomePage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Roblox Monitor'),
+        title: Text(context.watch<AppState>().t('app_name')),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -44,16 +44,16 @@ class HomePage extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Nhật ký sử dụng',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          Text(
+                            context.watch<AppState>().t('usage_log'),
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           TextButton(
                             onPressed: () => Navigator.push(
                               context,
                               MaterialPageRoute(builder: (context) => const StatsPage()),
                             ),
-                            child: const Text('Xem tất cả'),
+                            child: Text(context.watch<AppState>().t('view_all')),
                           ),
                         ],
                       ),
@@ -84,14 +84,14 @@ class HomePage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              isEnabled ? 'Đang bật Monitor' : 'Đang tắt Monitor',
+              isEnabled ? context.watch<AppState>().t('monitor_status_on') : context.watch<AppState>().t('monitor_status_off'),
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Ứng dụng đang theo dõi hoạt động Roblox trên máy tính này.',
+            Text(
+              context.watch<AppState>().t('monitor_desc'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70),
+              style: const TextStyle(color: Colors.white70),
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
@@ -104,7 +104,7 @@ class HomePage extends StatelessWidget {
                     final success = await appState.toggleMonitor(password);
                     if (!success && context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Mật khẩu không đúng!')),
+                        SnackBar(content: Text(appState.t('password_incorrect'))),
                       );
                     }
                   }
@@ -113,7 +113,7 @@ class HomePage extends StatelessWidget {
                 }
               },
               icon: Icon(isEnabled ? Icons.power_settings_new : Icons.play_arrow),
-              label: Text(isEnabled ? 'Tắt Monitor' : 'Bật Monitor'),
+              label: Text(isEnabled ? context.watch<AppState>().t('turn_off') : context.watch<AppState>().t('turn_on')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: isEnabled ? Colors.redAccent : Colors.green,
                 foregroundColor: Colors.white,
@@ -131,18 +131,18 @@ class HomePage extends StatelessWidget {
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Nhập mật khẩu'),
+        title: Text(context.read<AppState>().t('enter_password')),
         content: TextField(
           controller: controller,
           obscureText: true,
           autofocus: true,
-          decoration: const InputDecoration(labelText: 'Mật khẩu'),
+          decoration: InputDecoration(labelText: context.read<AppState>().t('password')),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.read<AppState>().t('cancel'))),
           TextButton(
             onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Xác nhận'),
+            child: Text(context.read<AppState>().t('confirm')),
           ),
         ],
       ),
@@ -164,7 +164,7 @@ class RecentLogsList extends StatelessWidget {
         
         final logs = snapshot.data!.take(5).toList(); // Show only top 5
         if (logs.isEmpty) {
-          return const Center(child: Text('Chưa có hoạt động nào gần đây.'));
+          return Center(child: Text(context.watch<AppState>().t('no_recent_activity')));
         }
 
         return ListView.builder(
@@ -180,7 +180,7 @@ class RecentLogsList extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.history, size: 20),
               title: Text(
-                'Chơi ${log['type']}',
+                '${context.watch<AppState>().t('playing')} ${log['type']}',
                 style: const TextStyle(fontSize: 14),
               ),
               subtitle: Text(

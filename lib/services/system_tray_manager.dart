@@ -54,7 +54,7 @@ class SystemTrayManager {
       debugPrint("Initializing SystemTray with: $iconPath");
       // Use a timeout to prevent hanging the whole initialization flow
       await _systemTray.initSystemTray(
-        title: "Roblox Monitor",
+        title: appState.t('app_name'),
         iconPath: iconPath ?? "",
       ).timeout(const Duration(seconds: 5));
     } catch (e) {
@@ -83,7 +83,7 @@ class SystemTrayManager {
   Future<void> updateMenu() async {
     await _menu.buildFrom([
       MenuItemLabel(
-        label: appState.isMonitorEnabled ? 'Tắt [OFF]' : 'Bật [ON]',
+        label: appState.isMonitorEnabled ? appState.t('tray_monitor_off') : appState.t('tray_monitor_on'),
         onClicked: (menuItem) async {
           if (!appState.isMonitorEnabled) {
              await appState.toggleMonitor(null);
@@ -96,7 +96,7 @@ class SystemTrayManager {
       ),
       MenuSeparator(),
       MenuItemLabel(
-        label: 'Mở cửa sổ',
+        label: appState.t('tray_open_window'),
         onClicked: (menuItem) => windowManager.show(),
       ),
       // MenuItemLabel(label: 'Thoát', onClicked: (menuItem) => exit(0)), // User says no exit menu

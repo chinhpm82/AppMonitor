@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:roblox_monitor/services/database_helper.dart';
 import 'package:roblox_monitor/services/win32_service.dart';
+import 'package:roblox_monitor/services/telegram_service.dart';
 import 'package:roblox_monitor/utils/constants.dart';
+import 'package:roblox_monitor/utils/translations.dart';
 import 'package:window_manager/window_manager.dart';
 
 enum WindowMode { tray, settings }
@@ -27,13 +29,22 @@ class AppState extends ChangeNotifier {
   bool _showOverlay = false;
   String _warningMessage = '';
 
+  // Configurable delays
+  int _warningDelay = Constants.warningDelaySeconds;
+  int _overlayDelay = Constants.overlayDelaySeconds;
+  int _killDelay = Constants.killDelaySeconds;
+
   // Schedule storage: key: "day_hour" (e.g. "1_18" for Mon 18:00), value: true/false
   Map<String, bool> _scheduleRoblox = {};
   Map<String, bool> _scheduleBrowser = {};
 
+  // Custom monitoring lists
+  List<String> _customKeywords = [];
+  List<String> _customApps = [];
+
   Timer? _timer;
   bool _isChecking = false;
-  bool _isTransitioning = false; // Add lock
+  bool _isTransitioning = false;
   WindowMode _windowMode = WindowMode.tray;
 
   bool get isTransitioning => _isTransitioning;
@@ -49,6 +60,29 @@ class AppState extends ChangeNotifier {
 
   Map<String, bool> get scheduleRoblox => _scheduleRoblox;
   Map<String, bool> get scheduleBrowser => _scheduleBrowser;
+
+  List<String> get customKeywords => _customKeywords;
+  List<String> get customApps => _customApps;
+
+  int get warningDelay => _warningDelay;
+  int get overlayDelay => _overlayDelay;
+  int get killDelay => _killDelay;
+
+  // Telegram Config
+  String _telegramBotToken = '';
+  String _telegramChatId = '';
+  int _telegramDebounceMinutes = 5;
+  String _telegramMessageTemplate = "Phát hiện nội dung giới hạn: {reason}"; // Legacy fallback
+
+  // Localization
+  String _language = 'vi';
+  String get currentLanguage => _language;
+  DateTime? _lastTelegramSentTime;
+
+  String get telegramBotToken => _telegramBotToken;
+  String get telegramChatId => _telegramChatId;
+  int get telegramDebounceMinutes => _telegramDebounceMinutes;
+  String get telegramMessageTemplate => _telegramMessageTemplate;
 
   AppState() {
     _loadSettings();
@@ -88,6 +122,64 @@ class AppState extends ChangeNotifier {
       } catch (_) {}
     }
 
+    _telegramBotToken = await DatabaseHelper.getSetting('telegram_bot_token') ?? '';
+    _telegramChatId = await DatabaseHelper.getSetting('telegram_chat_id') ?? '';
+
+    final keywords = await DatabaseHelper.getSetting('custom_keywords');
+    if (keywords != null) {
+      try {
+        _customKeywords = List<String>.from(jsonDecode(keywords));
+      } catch (_) {}
+    } else {
+      // Default initial keywords
+      _customKeywords = [...Constants.robloxKeywords];
+    }
+
+    // Load language
+    _language = await DatabaseHelper.getSetting('language') ?? 'vi';
+
+    // Load custom apps
+    final savedApps = await DatabaseHelper.getSetting('custom_apps');
+    if (savedApps != null) {
+      try {
+        _customApps = List<String>.from(jsonDecode(savedApps));
+      } catch (_) {}
+    } else {
+      // Default initial apps
+      _customApps = [Constants.robloxProcessName];
+    }
+
+    // Load delays
+    _warningDelay = int.tryParse(await DatabaseHelper.getSetting('delay_warning') ?? '') ?? Constants.warningDelaySeconds;
+    _overlayDelay = int.tryParse(await DatabaseHelper.getSetting('delay_overlay') ?? '') ?? Constants.overlayDelaySeconds;
+    _killDelay = int.tryParse(await DatabaseHelper.getSetting('delay_kill') ?? '') ?? Constants.killDelaySeconds;
+
+    // Load Telegram extra configs
+    _telegramDebounceMinutes = int.tryParse(await DatabaseHelper.getSetting('telegram_debounce') ?? '') ?? 5;
+    _telegramMessageTemplate = await DatabaseHelper.getSetting('telegram_template') ?? "Phát hiện nội dung giới hạn: {reason}";
+
+    notifyListeners();
+  }
+
+  Future<void> saveSettings({
+    required int warningDelay,
+    required int overlayDelay,
+    required int killDelay,
+    required int telegramDebounce,
+    required String telegramTemplate,
+  }) async {
+    _warningDelay = warningDelay;
+    _overlayDelay = overlayDelay;
+    _killDelay = killDelay;
+    _telegramDebounceMinutes = telegramDebounce;
+    _telegramMessageTemplate = telegramTemplate;
+
+    await DatabaseHelper.saveSetting('delay_warning', warningDelay.toString());
+    await DatabaseHelper.saveSetting('delay_overlay', overlayDelay.toString());
+    await DatabaseHelper.saveSetting('delay_kill', killDelay.toString());
+    await DatabaseHelper.saveSetting('telegram_debounce', telegramDebounce.toString());
+    await DatabaseHelper.saveSetting('telegram_template', telegramTemplate);
+    
     notifyListeners();
   }
 
@@ -97,6 +189,44 @@ class AppState extends ChangeNotifier {
     await DatabaseHelper.saveSetting('schedule_roblox', jsonEncode(roblox));
     await DatabaseHelper.saveSetting('schedule_browser', jsonEncode(browser));
     notifyListeners();
+  }
+
+  Future<void> saveTelegramConfig(String token, String chatId) async {
+    _telegramBotToken = token;
+    _telegramChatId = chatId;
+    await DatabaseHelper.saveSetting('telegram_bot_token', token);
+    await DatabaseHelper.saveSetting('telegram_chat_id', chatId);
+    notifyListeners();
+  }
+
+  Future<void> saveCustomMonitoring(List<String> keywords, List<String> apps) async {
+    _customKeywords = keywords;
+    _customApps = apps;
+    await DatabaseHelper.saveSetting('custom_keywords', jsonEncode(keywords));
+    await DatabaseHelper.saveSetting('custom_apps', jsonEncode(apps));
+    notifyListeners();
+  }
+
+  Future<void> _checkAndSendTelegramAlert(String reason) async {
+    if (_telegramBotToken.isEmpty || _telegramChatId.isEmpty) return;
+
+    final now = DateTime.now();
+    if (_lastTelegramSentTime != null && 
+        now.difference(_lastTelegramSentTime!).inMinutes < _telegramDebounceMinutes) {
+      return;
+    }
+
+    _lastTelegramSentTime = now;
+    
+    String message = _telegramMessageTemplate.replaceAll('{reason}', reason);
+    message = message.replaceAll('{time}', "${now.hour}:${now.minute.toString().padLeft(2, '0')}");
+
+    // Run in background
+    TelegramService.captureAndSend(
+      botToken: _telegramBotToken,
+      chatId: _telegramChatId,
+      caption: message,
+    );
   }
 
   Future<void> _updateTodayPlayTime() async {
@@ -144,6 +274,25 @@ class AppState extends ChangeNotifier {
     });
   }
 
+  Future<void> setLanguage(String lang) async {
+    if (_language != lang) {
+      _language = lang;
+      await DatabaseHelper.saveSetting('language', lang);
+      notifyListeners();
+    }
+  }
+
+  String t(String key, {List<String>? args}) {
+    String? val = AppTranslations.languages[_language]?[key];
+    val ??= AppTranslations.languages['vi']?[key] ?? key;
+    if (args != null && args.isNotEmpty) {
+      for (int i = 0; i < args.length; i++) {
+        val = val!.replaceAll('{$i}', args[i]);
+      }
+    }
+    return val!;
+  }
+
   Future<String> get _password async => await DatabaseHelper.getSetting('app_password') ?? Constants.defaultPassword;
 
   Future<bool> verifyPassword(String input) async {
@@ -168,19 +317,48 @@ class AppState extends ChangeNotifier {
   }
 
   void _performCheck() {
+    // 1. Check Desktop Apps
     bool robloxNow = Win32Service.isProcessRunning(Constants.robloxProcessName);
-    String? browserMatchRoblox = Win32Service.getBrowserMatch(Constants.robloxKeywords);
-    String? browserMatchSite = Win32Service.getBrowserMatch(Constants.siteKeywords);
+    bool customAppNow = false;
+    String? foundCustomAppName;
+    
+    for (final app in _customApps) {
+      if (Win32Service.isProcessRunning(app)) {
+        customAppNow = true;
+        foundCustomAppName = app;
+        break;
+      }
+    }
 
-    bool hasBrowserRoblox = browserMatchRoblox != null;
-    bool hasBrowserSite = browserMatchSite != null;
+    // 2. Check Browser Keywords
+    // Use custom keywords as the primary list now
+    String? browserMatch = _customKeywords.isNotEmpty 
+        ? Win32Service.getBrowserMatch(_customKeywords)
+        : null;
 
-    // Preserve the detected title for logging
-    if (hasBrowserRoblox) _currentRobloxTitle = browserMatchRoblox;
-    if (hasBrowserSite && !hasBrowserRoblox) _currentBrowserTitle = browserMatchSite;
+    bool hasBrowserViolation = browserMatch != null;
+    
+    // Check if it's specifically Roblox for separate logging/alerts
+    bool isRobloxWeb = false;
+    if (browserMatch != null) {
+      final lowerMatch = browserMatch.toLowerCase();
+      isRobloxWeb = lowerMatch.contains('roblox') || lowerMatch.contains('blox');
+    }
 
-    // Logging play time (always)
-    _handleLogging(robloxNow, hasBrowserRoblox, hasBrowserSite);
+    // Logging play time
+    _handleLogging(robloxNow || customAppNow, isRobloxWeb, hasBrowserViolation && !isRobloxWeb);
+    
+    // Check Telegram Notification
+    // Check Telegram Notification
+    if (robloxNow) {
+       _checkAndSendTelegramAlert(t('msg_roblox_app'));
+    } else if (customAppNow) {
+       _checkAndSendTelegramAlert(t('msg_restricted_app', args: [foundCustomAppName ?? '']));
+    } else if (isRobloxWeb) {
+       _checkAndSendTelegramAlert(t('msg_roblox_web', args: [_currentRobloxTitle ?? '']));
+    } else if (hasBrowserViolation) {
+       _checkAndSendTelegramAlert(t('msg_restricted_web', args: [browserMatch ?? '']));
+    }
 
     if (!_isMonitorEnabled) {
        _resetViolations();
@@ -201,15 +379,20 @@ class AppState extends ChangeNotifier {
       allowYouTube = true; // Allow general YouTube
     }
 
-    // Violation logic for Roblox
-    if (robloxNow && !allowRoblox) {
+    // Violation logic for Roblox & Custom Apps
+    bool appViolation = (robloxNow && !allowRoblox) || (customAppNow && !allowRoblox);
+    
+    if (appViolation) {
       _robloxViolationSeconds++;
-      if (_robloxViolationSeconds == Constants.warningDelaySeconds) {
+      if (_robloxViolationSeconds == _warningDelay) {
         _showWarning = true;
-        _warningMessage = 'Không được phép chơi Roblox vào thời gian này!';
+        _warningMessage = customAppNow 
+           ? t('warn_app', args: [foundCustomAppName ?? '']) 
+           : t('warn_roblox');
         notifyListeners();
-      } else if (_robloxViolationSeconds >= Constants.killDelaySeconds) {
-        Win32Service.killProcess(Constants.robloxProcessName);
+      } else if (_robloxViolationSeconds >= _killDelay) {
+        if (robloxNow) Win32Service.killProcess(Constants.robloxProcessName);
+        if (customAppNow && foundCustomAppName != null) Win32Service.killProcess(foundCustomAppName);
         _robloxViolationSeconds = 0;
         _showWarning = false;
         notifyListeners();
@@ -219,22 +402,29 @@ class AppState extends ChangeNotifier {
     }
 
     // Violation logic for Browser
-    bool browserRobloxViolation = hasBrowserRoblox && !allowRoblox;
-    bool browserSiteViolation = hasBrowserSite && !hasBrowserRoblox && !allowYouTube;
+    // Simplified: browser violation is any keyword match when not allowed
+    bool isAllowedInBrowser = true;
+    if (isRobloxWeb) {
+      isAllowedInBrowser = allowRoblox;
+    } else {
+      isAllowedInBrowser = allowYouTube;
+    }
+
+    bool browserViolation = hasBrowserViolation && !isAllowedInBrowser;
     
-    if (browserRobloxViolation || browserSiteViolation) {
+    if (browserViolation) {
       _browserViolationSeconds++;
-      if (_browserViolationSeconds == Constants.warningDelaySeconds) {
+      if (_browserViolationSeconds == _warningDelay) {
         _showWarning = true;
-        _warningMessage = browserRobloxViolation 
-            ? 'Không được phép xem nội dung Roblox vào lúc này!' 
-            : 'Không được phép xem YouTube vào lúc này!';
+        _warningMessage = isRobloxWeb 
+            ? t('warn_web_roblox') 
+            : t('warn_web_restricted');
         notifyListeners();
-      } else if (_browserViolationSeconds == Constants.overlayDelaySeconds) {
+      } else if (_browserViolationSeconds == _overlayDelay) {
         _showOverlay = true;
         notifyListeners();
-      } else if (_browserViolationSeconds >= Constants.killDelaySeconds) {
-        Win32Service.killBrowsers(Constants.robloxKeywords);
+      } else if (_browserViolationSeconds >= _killDelay) {
+        Win32Service.killBrowsers(_customKeywords);
         _browserViolationSeconds = 0;
         _showWarning = false;
         _showOverlay = false;
@@ -242,13 +432,13 @@ class AppState extends ChangeNotifier {
       }
     } else {
       _browserViolationSeconds = 0;
-      if (!robloxNow || allowRoblox) {
+      if (!appViolation) {
         _showWarning = false;
       }
       _showOverlay = false;
     }
 
-    if (!(robloxNow && !allowRoblox) && !browserRobloxViolation && !browserSiteViolation) {
+    if (!appViolation && !browserViolation) {
       _showWarning = false;
       _showOverlay = false;
       notifyListeners();
@@ -256,15 +446,19 @@ class AppState extends ChangeNotifier {
   }
 
   void _handleLogging(bool robloxNow, bool browserRoblox, bool browserSite) {
+    // Preserve detection for logging details
+    if (browserRoblox) _currentRobloxTitle ??= 'Start Detected';
+    if (browserSite && !browserRoblox) _currentBrowserTitle ??= 'Start Detected';
+
     if (robloxNow) {
       _robloxStartTime ??= DateTime.now();
-      _todayPlayTimeSeconds++; // increment today's counter in real-time
+      _todayPlayTimeSeconds++;
     } else {
       if (_robloxStartTime != null) {
         final duration = DateTime.now().difference(_robloxStartTime!).inSeconds;
         if (duration > 0) {
           DatabaseHelper.logPlay(_robloxStartTime!, DateTime.now(), duration, 'Roblox App');
-          _updateTodayPlayTime(); // persist update
+          _updateTodayPlayTime();
         }
         _robloxStartTime = null;
       }
@@ -278,6 +472,8 @@ class AppState extends ChangeNotifier {
         final duration = DateTime.now().difference(_browserStartTime!).inSeconds;
         if (duration > 0) {
           String detail = browserRoblox ? (_currentRobloxTitle ?? 'Roblox Web') : (_currentBrowserTitle ?? 'YouTube');
+        if (duration > 0) {
+          String detail = browserRoblox ? (_currentRobloxTitle ?? 'Roblox Web') : (_currentBrowserTitle ?? 'YouTube');
           DatabaseHelper.logPlay(_browserStartTime!, DateTime.now(), duration, 'Trình duyệt: $detail');
           _updateTodayPlayTime();
         }
@@ -287,6 +483,7 @@ class AppState extends ChangeNotifier {
       }
     }
   }
+}
 
   Future<void> setWindowMode(WindowMode mode) async {
     debugPrint("setWindowMode called with mode: $mode");
@@ -297,14 +494,11 @@ class AppState extends ChangeNotifier {
     _isTransitioning = true;
     
     try {
-      // Simply update the UI state - avoid window_manager calls that cause native crash
       _windowMode = mode;
       notifyListeners();
       
-      // Small delay to let UI update
       await Future.delayed(const Duration(milliseconds: 50));
       
-      // Just ensure window stays visible
       await windowManager.show();
       await windowManager.focus();
       

@@ -9,7 +9,8 @@ class TrayPopup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isEnabled = context.select<AppState, bool>((s) => s.isMonitorEnabled);
+    final appState = context.watch<AppState>();
+    final isEnabled = appState.isMonitorEnabled;
     
     return Material(
       color: Colors.transparent,
@@ -35,9 +36,9 @@ class TrayPopup extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                   const Text(
-                    'Roblox Monitor',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70),
+                   Text(
+                    appState.t('app_name'),
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white70),
                   ),
                   IconButton(
                     icon: const Icon(Icons.settings, size: 20, color: Colors.white54),
@@ -53,7 +54,7 @@ class TrayPopup extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    isEnabled ? 'MONITOR: ON' : 'MONITOR: OFF',
+                    isEnabled ? appState.t('tray_status_on') : appState.t('tray_status_off'),
                     style: TextStyle(
                       color: isEnabled ? Colors.greenAccent : Colors.redAccent,
                       fontWeight: FontWeight.bold,
@@ -90,19 +91,19 @@ class TrayPopup extends StatelessWidget {
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Nhập mật khẩu'),
+        title: Text(context.read<AppState>().t('enter_password')),
         content: TextField(
           controller: controller,
           obscureText: true,
           autofocus: true,
-          decoration: const InputDecoration(labelText: 'Mật khẩu'),
+          decoration: InputDecoration(labelText: context.read<AppState>().t('password')),
           onSubmitted: (val) => Navigator.pop(context, val),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.read<AppState>().t('cancel'))),
           TextButton(
             onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Xác nhận'),
+            child: Text(context.read<AppState>().t('confirm')),
           ),
         ],
       ),

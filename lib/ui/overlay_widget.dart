@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:roblox_monitor/services/app_state.dart';
 import 'package:window_manager/window_manager.dart';
 
 class FullScreenOverlay extends StatefulWidget {
@@ -35,23 +37,24 @@ class _FullScreenOverlayState extends State<FullScreenOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
     return Container(
       color: Colors.black.withOpacity(0.9),
-      child: const Center(
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.block, color: Colors.red, size: 100),
-            SizedBox(height: 20),
+            const Icon(Icons.block, color: Colors.red, size: 100),
+            const SizedBox(height: 20),
             Text(
-              'TRANG WEB BỊ CHẶN',
-              style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+              app.t('sites_blocked_title'),
+              style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Text(
-              'Bạn đang truy cập trang web có nội dung Roblox.\nTrình duyệt sẽ bị tắt sau giây lát.',
+              app.t('sites_blocked_msg'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70, fontSize: 18),
+              style: const TextStyle(color: Colors.white70, fontSize: 18),
             ),
           ],
         ),

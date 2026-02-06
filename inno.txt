@@ -5,3 +5,8 @@ flutter build windows --release
 
 # 2. Biên dịch bộ cài đặt bằng Inno Setup
 & "C:\Users\admin\AppData\Local\Programs\Inno Setup 6\ISCC.exe" installer.iss
+
+https://api.telegram.org/bot<BotToken>/getUpdates
+BotToken: 8502976200:AAG6uph20NX4yFuGifXyE6-jb0xyEH_Jtis
+ChatID: 5009810256 chinhpm
+ChatID Group: 
