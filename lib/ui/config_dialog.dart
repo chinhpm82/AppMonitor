@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:roblox_monitor/ui/editable_list.dart';
 import 'package:provider/provider.dart';
 import 'package:roblox_monitor/services/app_state.dart';
 import 'package:roblox_monitor/services/database_helper.dart';
@@ -209,7 +210,7 @@ class _ConfigDialogState extends State<ConfigDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildEditableList(
+          EditableList(
             title: context.watch<AppState>().t('keywords_title'),
             subtitle: context.watch<AppState>().t('keywords_subtitle'),
             items: _tempKeywords,
@@ -219,7 +220,7 @@ class _ConfigDialogState extends State<ConfigDialog> {
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 16),
-          _buildEditableList(
+          EditableList(
             title: context.watch<AppState>().t('apps_title'),
             subtitle: context.watch<AppState>().t('apps_subtitle'),
             items: _tempApps,
@@ -259,75 +260,6 @@ class _ConfigDialogState extends State<ConfigDialog> {
     );
   }
 
-  Widget _buildEditableList({
-    required String title,
-    required String subtitle,
-    required List<String> items,
-    required String hint,
-    required VoidCallback onChanged,
-  }) {
-    final controller = TextEditingController();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Text(subtitle, style: const TextStyle(fontSize: 14, color: Colors.white60)),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                decoration: InputDecoration(
-                  hintText: hint,
-                  border: const OutlineInputBorder(),
-                  isDense: true,
-                ),
-                onSubmitted: (val) {
-                  if (val.trim().isNotEmpty) {
-                    setState(() {
-                      items.add(val.trim());
-                      controller.clear();
-                      onChanged();
-                    });
-                  }
-                },
-              ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () {
-                if (controller.text.trim().isNotEmpty) {
-                  setState(() {
-                    items.add(controller.text.trim());
-                    controller.clear();
-                    onChanged();
-                  });
-                }
-              },
-              child: Text(context.read<AppState>().t('add')),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: items.map((item) => Chip(
-            label: Text(item),
-            deleteIcon: const Icon(Icons.close, size: 18),
-            onDeleted: () {
-              setState(() {
-                items.remove(item);
-                onChanged();
-              });
-            },
-          )).toList(),
-        ),
-      ],
-    );
-  }
 
 
   Widget _buildStatsTab() {
