@@ -79,3 +79,6 @@ web/favicon.png
 
 # Local configuration
 local.properties
+
+# Build artifacts
+*.dmg
