@@ -19,21 +19,23 @@ class SystemTrayManager {
     
     // In release mode, look in the installed app data folder
     if (kReleaseMode) {
-      possiblePaths.add(p.join(p.dirname(Platform.resolvedExecutable), 'data', 'flutter_assets', 'assets', 'app_icon.ico'));
+      if (Platform.isWindows) {
+        possiblePaths.add(p.join(p.dirname(Platform.resolvedExecutable), 'data', 'flutter_assets', 'assets', 'app_icon.ico'));
+      } else if (Platform.isMacOS) {
+        possiblePaths.add(p.join(p.dirname(Platform.resolvedExecutable), '..', 'Resources', 'flutter_assets', 'assets', 'app_icon.png'));
+      }
     }
     
-    // Debug mode paths - relative to executable location
+    // Paths relative to executable or current directory
     final exeDir = p.dirname(Platform.resolvedExecutable);
-    possiblePaths.add(p.join(exeDir, 'assets', 'app_icon.ico'));
-    possiblePaths.add(p.join(exeDir, 'data', 'flutter_assets', 'assets', 'app_icon.ico'));
+    final iconName = Platform.isWindows ? 'app_icon.ico' : 'app_icon.png';
     
-    // Current directory paths
-    possiblePaths.add(p.join(Directory.current.path, 'assets', 'app_icon.ico'));
-    possiblePaths.add(p.join(Directory.current.path, 'windows', 'runner', 'resources', 'app_icon.ico'));
-    
-    // Hardcoded source path for development
-    possiblePaths.add('D:\\IT\\GitHub\\RobloxMonitor\\assets\\app_icon.ico');
-    possiblePaths.add('D:\\IT\\GitHub\\RobloxMonitor\\windows\\runner\\resources\\app_icon.ico');
+    possiblePaths.addAll([
+      p.join(exeDir, 'assets', iconName),
+      p.join(exeDir, 'data', 'flutter_assets', 'assets', iconName),
+      p.join(Directory.current.path, 'assets', iconName),
+      p.join(Directory.current.path, 'macos', 'Runner', 'Assets.xcassets', 'AppIcon.appiconset', 'app_icon_32.png'),
+    ]);
     
     String? iconPath;
     for (var path in possiblePaths) {

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:roblox_monitor/services/database_helper.dart';
-import 'package:roblox_monitor/services/win32_service.dart';
+import 'package:roblox_monitor/services/native_service.dart';
 import 'package:roblox_monitor/services/telegram_service.dart';
 import 'package:roblox_monitor/utils/constants.dart';
 import 'package:roblox_monitor/utils/translations.dart';
@@ -318,12 +318,12 @@ class AppState extends ChangeNotifier {
 
   void _performCheck() {
     // 1. Check Desktop Apps
-    bool robloxNow = Win32Service.isProcessRunning(Constants.robloxProcessName);
+    bool robloxNow = NativeService.isProcessRunning(Constants.robloxProcessName);
     bool customAppNow = false;
     String? foundCustomAppName;
     
     for (final app in _customApps) {
-      if (Win32Service.isProcessRunning(app)) {
+      if (NativeService.isProcessRunning(app)) {
         customAppNow = true;
         foundCustomAppName = app;
         break;
@@ -333,7 +333,7 @@ class AppState extends ChangeNotifier {
     // 2. Check Browser Keywords
     // Use custom keywords as the primary list now
     String? browserMatch = _customKeywords.isNotEmpty 
-        ? Win32Service.getBrowserMatch(_customKeywords)
+        ? NativeService.getBrowserMatch(_customKeywords)
         : null;
 
     bool hasBrowserViolation = browserMatch != null;
@@ -391,8 +391,8 @@ class AppState extends ChangeNotifier {
            : t('warn_roblox');
         notifyListeners();
       } else if (_robloxViolationSeconds >= _killDelay) {
-        if (robloxNow) Win32Service.killProcess(Constants.robloxProcessName);
-        if (customAppNow && foundCustomAppName != null) Win32Service.killProcess(foundCustomAppName);
+        if (robloxNow) NativeService.killProcess(Constants.robloxProcessName);
+        if (customAppNow && foundCustomAppName != null) NativeService.killProcess(foundCustomAppName);
         _robloxViolationSeconds = 0;
         _showWarning = false;
         notifyListeners();
@@ -424,7 +424,7 @@ class AppState extends ChangeNotifier {
         _showOverlay = true;
         notifyListeners();
       } else if (_browserViolationSeconds >= _killDelay) {
-        Win32Service.killBrowsers(_customKeywords);
+        NativeService.killBrowsers(_customKeywords);
         _browserViolationSeconds = 0;
         _showWarning = false;
         _showOverlay = false;

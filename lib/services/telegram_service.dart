@@ -64,11 +64,16 @@ class TelegramService {
       final directory = await getTemporaryDirectory();
       final String filePath = p.join(directory.path, 'roblox_capture_${DateTime.now().millisecondsSinceEpoch}.png');
       
-      // Capture using PowerShell
-      bool captured = await _captureScreenPowerShell(filePath);
+      // Capture using platform-specific command
+      bool captured = false;
+      if (Platform.isWindows) {
+        captured = await _captureScreenPowerShell(filePath);
+      } else if (Platform.isMacOS) {
+        captured = await _captureScreenMacOS(filePath);
+      }
       
       if (!captured) {
-        debugPrint('Telegram Error: Failed to capture screen via PowerShell.');
+        debugPrint('Telegram Error: Failed to capture screen.');
         return false;
       }
 
@@ -119,6 +124,18 @@ class TelegramService {
       }
     } catch (e) {
       debugPrint('Telegram Exception ($baseUrl): $e');
+      return false;
+    }
+  }
+
+  static Future<bool> _captureScreenMacOS(String outputPath) async {
+    try {
+      // macOS screencapture command
+      // -x: mute sound
+      final result = await Process.run('screencapture', ['-x', outputPath]);
+      return result.exitCode == 0;
+    } catch (e) {
+      debugPrint('macOS Capture Exception: $e');
       return false;
     }
   }
