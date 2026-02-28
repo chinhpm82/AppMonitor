@@ -89,6 +89,8 @@ class AppTranslations {
       'new_pass': 'Mật khẩu mới',
       'account_note': 'Lưu ý: Bạn chọn các khung giờ ĐƯỢC PHÉP chơi. Các khung giờ không tích sẽ bị chặn hoàn toàn khi Monitor ở trạng thái BẬT.',
       'language': 'Ngôn ngữ (Language)',
+      'tab_system_logs': 'Nhật ký hệ thống',
+      'no_system_logs': 'Chưa có nhật ký hệ thống',
       
       // Overlay
       'sites_blocked_title': 'TRANG WEB BỊ CHẶN',
@@ -193,6 +195,8 @@ class AppTranslations {
       'new_pass': 'New Password',
       'account_note': 'Note: Selected slots are ALLOWED. Unchecked slots will be BLOCKED when Monitor is ON.',
       'language': 'Ngôn ngữ (Language)',
+      'tab_system_logs': 'System Logs',
+      'no_system_logs': 'No system logs available',
 
       // Overlay
       'sites_blocked_title': 'WEBSITE BLOCKED',

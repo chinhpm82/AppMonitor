@@ -25,7 +25,7 @@ class DatabaseHelper {
         version: 1,
         onCreate: (db, version) async {
           await db.execute('''
-            CREATE TABLE play_logs (
+            CREATE TABLE IF NOT EXISTS play_logs (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               start_time TEXT,
               end_time TEXT,
@@ -34,9 +34,27 @@ class DatabaseHelper {
             )
           ''');
           await db.execute('''
-            CREATE TABLE settings (
+            CREATE TABLE IF NOT EXISTS settings (
               key TEXT PRIMARY KEY,
               value TEXT
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS system_logs (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              timestamp TEXT,
+              message TEXT,
+              level TEXT
+            )
+          ''');
+        },
+        onOpen: (db) async {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS system_logs (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              timestamp TEXT,
+              message TEXT,
+              level TEXT
             )
           ''');
         },

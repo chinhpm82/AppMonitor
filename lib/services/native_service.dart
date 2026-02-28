@@ -86,10 +86,13 @@ class NativeService {
             else
               -- Chrome-based browsers (Chrome, Edge, Brave, Arc)
               tell application bName
-                repeat with w in windows
-                  repeat with t in tabs of w
-                    set foundTitle to foundTitle & (title of t) & "\\n"
-                  end repeat
+                set windowList to windows
+                repeat with w in windowList
+                  try
+                    set tabTitles to title of every tab of w
+                    set AppleScript's text item delimiters to "\\n"
+                    set foundTitle to foundTitle & (tabTitles as string) & "\\n"
+                  end try
                 end repeat
               end tell
             end if

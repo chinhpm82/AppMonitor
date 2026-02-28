@@ -142,7 +142,7 @@ class _ConfigDialogState extends State<ConfigDialog> {
                 Tab(text: context.watch<AppState>().t('tab_schedule')),
                 Tab(text: context.watch<AppState>().t('tab_monitoring')),
                 Tab(text: context.watch<AppState>().t('tab_stats')),
-                Tab(text: "Nhật ký hệ thống"), // System Logs
+                Tab(text: context.watch<AppState>().t('tab_system_logs')), 
                 Tab(text: context.watch<AppState>().t('tab_notification')),
                 Tab(text: context.watch<AppState>().t('tab_account')),
               ],
@@ -271,7 +271,7 @@ class _ConfigDialogState extends State<ConfigDialog> {
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         final logs = snapshot.data!;
-        if (logs.isEmpty) return const Center(child: Text("Chưa có nhật ký hệ thống"));
+        if (logs.isEmpty) return Center(child: Text(context.watch<AppState>().t('no_system_logs')));
 
         return ListView.builder(
           padding: const EdgeInsets.all(16),
