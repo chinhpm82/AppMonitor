@@ -130,10 +130,14 @@ class TelegramService {
 
   static Future<bool> _captureScreenMacOS(String outputPath) async {
     try {
-      // macOS screencapture command
-      // -x: mute sound
-      final result = await Process.run('screencapture', ['-x', outputPath]);
-      return result.exitCode == 0;
+      // Use absolute path for robustness on macOS
+      // -x: mute sound, -t png: format
+      final result = await Process.run('/usr/sbin/screencapture', ['-x', '-t', 'png', outputPath]);
+      if (result.exitCode != 0) {
+        debugPrint('macOS Capture Error: ${result.stderr}');
+        return false;
+      }
+      return true;
     } catch (e) {
       debugPrint('macOS Capture Exception: $e');
       return false;

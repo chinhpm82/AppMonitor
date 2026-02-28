@@ -301,8 +301,8 @@ class AppState extends ChangeNotifier {
 
   void _performCheck() {
     _heartbeatCount++;
-    if (_heartbeatCount % 30 == 0) { // Every 30 seconds
-       DatabaseHelper.logSystemEvent("Heartbeat: Loop is active (Cycle $_heartbeatCount)");
+    if (_heartbeatCount % 60 == 0) { // Every 60 seconds
+       DatabaseHelper.logSystemEvent("Heartbeat: Active (Cycle $_heartbeatCount)");
     }
     
     // 1. Check Desktop Apps
@@ -327,7 +327,10 @@ class AppState extends ChangeNotifier {
     }
 
     if (isEnabled && _customKeywords.isNotEmpty) {
-       browserMatch = NativeService.getBrowserMatch(_customKeywords);
+       final match = NativeService.getBrowserMatch(_customKeywords);
+       if (match != null) {
+         browserMatch = match;
+       }
     }
 
     bool hasBrowserViolation = browserMatch != null;

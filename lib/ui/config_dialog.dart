@@ -274,7 +274,7 @@ class _ConfigDialogState extends State<ConfigDialog> {
         if (logs.isEmpty) return Center(child: Text(context.watch<AppState>().t('no_system_logs')));
 
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           itemCount: logs.length,
           itemBuilder: (context, index) {
             final log = logs[index];
@@ -282,10 +282,29 @@ class _ConfigDialogState extends State<ConfigDialog> {
             final level = log['level'] as String;
             final message = log['message'] as String;
 
-            return ListTile(
-              dense: true,
-              title: Text(message, style: TextStyle(color: level == 'ERROR' ? Colors.redAccent : Colors.white)),
-              subtitle: Text("${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}:${timestamp.second.toString().padLeft(2, '0')} - $level", style: const TextStyle(fontSize: 10)),
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+              child: Row(
+                children: [
+                   Text(
+                    "${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}:${timestamp.second.toString().padLeft(2, '0')}",
+                    style: const TextStyle(fontSize: 10, color: Colors.white54, fontFamily: 'monospace'),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(width: 2, height: 10, color: level == 'ERROR' ? Colors.redAccent : (level == 'WARNING' ? Colors.orangeAccent : Colors.blueAccent)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: level == 'ERROR' ? Colors.redAccent : Colors.white.withOpacity(0.9),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             );
           },
         );
