@@ -58,65 +58,61 @@ class NativeService {
   static String? _getMacOSBrowserMatch(List<String> keywords) {
     if (keywords.isEmpty) return null;
 
+    // Verbose log for start
+    // DatabaseHelper.logSystemEvent("Debug: Starting Browser Check...");
+
     const script = '''
 set foundTitle to ""
--- List of browsers to check
-set browserNames to {"Safari", "Google Chrome", "Brave Browser", "Microsoft Edge", "Firefox", "Arc"}
+-- Simple check without process lists to force prompt
+try
+    tell application "Google Chrome"
+        set windowList to windows
+        repeat with w in windowList
+            try
+                set tabTitles to title of every tab of w
+                set AppleScript's text item delimiters to "\\n"
+                set foundTitle to foundTitle & (tabTitles as string) & "\\n"
+            end try
+        end repeat
+    end tell
+on error
+    set foundTitle to foundTitle & "CHROME_ERROR\\n"
+end try
 
-tell application "System Events"
-	set runningApps to name of every process
-end tell
-
-repeat with bName in browserNames
-	if runningApps contains bName then
-		try
-			if bName is "Safari" then
-				tell application "Safari"
-					repeat with w in windows
-						repeat with t in tabs of w
-							set foundTitle to foundTitle & (name of t) & "\\n"
-						end repeat
-					end repeat
-				end tell
-			else if bName is "Firefox" then
-				tell application "System Events" to tell process "Firefox"
-					set foundTitle to foundTitle & (name of every window) & "\\n"
-				end tell
-			else
-				-- Chrome-based (Chrome, Edge, Brave, Arc)
-				tell application bName
-					set titlesList to title of tabs of every window
-					repeat with windowTabs in titlesList
-						repeat with tTitle in windowTabs
-							set foundTitle to foundTitle & tTitle & "\\n"
-						end repeat
-					end repeat
-				end tell
-			end if
-		on error
-			-- Ignore errors for specific browsers
-		end try
-	end if
-end repeat
+try
+    tell application "Safari"
+        repeat with w in windows
+            repeat with t in tabs of w
+                set foundTitle to foundTitle & (name of t) & "\\n"
+            end repeat
+        end repeat
+    end tell
+on error
+    set foundTitle to foundTitle & "SAFARI_ERROR\\n"
+end try
 
 return foundTitle
 ''';
 
     try {
       final result = Process.runSync('osascript', ['-e', script]);
+      
       if (result.exitCode != 0) {
-        DatabaseHelper.logSystemEvent("AppleScript Error: ${result.stderr}", level: 'ERROR');
+        DatabaseHelper.logSystemEvent("AppleScript Fail: ${result.stderr}", level: 'ERROR');
         return null;
       }
       
       final output = result.stdout.toString().toLowerCase();
+      
+      // Log what we found (or didn't find)
       if (output.trim().isEmpty) {
-        // Log periodically that no titles were found to avoid spamming
-        return null;
+        // Only log "Found nothing" occasionally
+        if (DateTime.now().second % 10 == 0) {
+           DatabaseHelper.logSystemEvent("Browser Check: No titles returned from osascript");
+        }
+      } else {
+        DatabaseHelper.logSystemEvent("Titles Found: ${output.replaceAll('\\n', ' ').substring(0, output.length > 50 ? 50 : output.length)}");
       }
-
-      // Log the first 100 chars of output to help debug detection
-      DatabaseHelper.logSystemEvent("Browser Titles Found: ${output.length > 100 ? output.substring(0, 100) + '...' : output}");
 
       for (final keyword in keywords) {
         if (keyword.trim().isEmpty) continue;
@@ -125,7 +121,7 @@ return foundTitle
         }
       }
     } catch (e) {
-      DatabaseHelper.logSystemEvent("NativeService Error: $e", level: 'ERROR');
+      DatabaseHelper.logSystemEvent("NativeService Exception: $e", level: 'ERROR');
     }
     return null;
   }
