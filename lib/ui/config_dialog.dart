@@ -122,7 +122,7 @@ class _ConfigDialogState extends State<ConfigDialog> {
     }
 
     return DefaultTabController(
-      length: 5, // Increased from 4 to 5
+      length: 6, // Increased from 5 to 6
       child: Container(
         color: const Color(0xFF121212),
         child: Column(
@@ -137,10 +137,12 @@ class _ConfigDialogState extends State<ConfigDialog> {
               ),
             ),
             TabBar(
+              isScrollable: true,
               tabs: [
                 Tab(text: context.watch<AppState>().t('tab_schedule')),
                 Tab(text: context.watch<AppState>().t('tab_monitoring')),
                 Tab(text: context.watch<AppState>().t('tab_stats')),
+                Tab(text: "Nhật ký hệ thống"), // System Logs
                 Tab(text: context.watch<AppState>().t('tab_notification')),
                 Tab(text: context.watch<AppState>().t('tab_account')),
               ],
@@ -149,8 +151,9 @@ class _ConfigDialogState extends State<ConfigDialog> {
               child: TabBarView(
                 children: [
                    _buildScheduleTab(),
-                   _buildMonitoringTab(), // New Tab
+                   _buildMonitoringTab(),
                    _buildStatsTab(),
+                   _buildSystemLogsTab(), // New Tab
                    _buildNotificationTab(),
                    _buildAccountTab(),
                 ],
@@ -261,6 +264,34 @@ class _ConfigDialogState extends State<ConfigDialog> {
   }
 
 
+
+  Widget _buildSystemLogsTab() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: DatabaseHelper.getSystemLogs(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        final logs = snapshot.data!;
+        if (logs.isEmpty) return const Center(child: Text("Chưa có nhật ký hệ thống"));
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: logs.length,
+          itemBuilder: (context, index) {
+            final log = logs[index];
+            final timestamp = DateTime.parse(log['timestamp']);
+            final level = log['level'] as String;
+            final message = log['message'] as String;
+
+            return ListTile(
+              dense: true,
+              title: Text(message, style: TextStyle(color: level == 'ERROR' ? Colors.redAccent : Colors.white)),
+              subtitle: Text("${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}:${timestamp.second.toString().padLeft(2, '0')} - $level", style: const TextStyle(fontSize: 10)),
+            );
+          },
+        );
+      },
+    );
+  }
 
   Widget _buildStatsTab() {
     return FutureBuilder<List<Map<String, dynamic>>>(

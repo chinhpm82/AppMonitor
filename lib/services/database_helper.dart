@@ -44,6 +44,22 @@ class DatabaseHelper {
     );
   }
 
+  static Future<void> logSystemEvent(String message, {String level = 'INFO'}) async {
+    final db = await database;
+    await db.insert('system_logs', {
+      'timestamp': DateTime.now().toIso8601String(),
+      'message': message,
+      'level': level,
+    });
+    // Keep only last 200 logs to avoid bloating
+    await db.execute('DELETE FROM system_logs WHERE id NOT IN (SELECT id FROM system_logs ORDER BY id DESC LIMIT 200)');
+  }
+
+  static Future<List<Map<String, dynamic>>> getSystemLogs() async {
+    final db = await database;
+    return await db.query('system_logs', orderBy: 'id DESC', limit: 100);
+  }
+
   static Future<void> logPlay(DateTime start, DateTime end, int duration, String type) async {
     final db = await database;
     await db.insert('play_logs', {

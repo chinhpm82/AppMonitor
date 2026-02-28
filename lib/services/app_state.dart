@@ -311,12 +311,15 @@ class AppState extends ChangeNotifier {
     
     try {
       _performCheck();
+    } catch (e) {
+      DatabaseHelper.logSystemEvent("Monitoring Error: $e", level: 'ERROR');
     } finally {
       _isChecking = false;
     }
   }
 
   void _performCheck() {
+    // DatabaseHelper.logSystemEvent("Periodic check started"); // Too noisy for every second
     // 1. Check Desktop Apps
     bool robloxNow = NativeService.isProcessRunning(Constants.robloxProcessName);
     bool customAppNow = false;
@@ -351,12 +354,16 @@ class AppState extends ChangeNotifier {
     // Check Telegram Notification
     // Check Telegram Notification
     if (robloxNow) {
+       DatabaseHelper.logSystemEvent("Detected Roblox App");
        _checkAndSendTelegramAlert(t('msg_roblox_app'));
     } else if (customAppNow) {
+       DatabaseHelper.logSystemEvent("Detected Custom App: $foundCustomAppName");
        _checkAndSendTelegramAlert(t('msg_restricted_app', args: [foundCustomAppName ?? '']));
     } else if (isRobloxWeb) {
+       DatabaseHelper.logSystemEvent("Detected Roblox Web: $_currentRobloxTitle");
        _checkAndSendTelegramAlert(t('msg_roblox_web', args: [_currentRobloxTitle ?? '']));
     } else if (hasBrowserViolation) {
+       DatabaseHelper.logSystemEvent("Detected Restricted Web: $browserMatch");
        _checkAndSendTelegramAlert(t('msg_restricted_web', args: [browserMatch ?? '']));
     }
 
