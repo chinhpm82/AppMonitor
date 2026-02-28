@@ -43,8 +43,10 @@ class NativeService {
 
   static bool _isMacOSProcessRunning(String processName) {
     try {
-      // pgrep -x matches the exact process name
-      final result = Process.runSync('pgrep', ['-ix', processName]);
+      // Remove .exe suffix if present (from Windows config)
+      final name = processName.replaceAll('.exe', '');
+      // pgrep -fi matches any part of the process name/path case-insensitively
+      final result = Process.runSync('pgrep', ['-fi', name]);
       return result.exitCode == 0;
     } catch (e) {
       debugPrint("MacOS Process Check Error: $e");
@@ -57,33 +59,43 @@ class NativeService {
 
     final script = '''
       set foundTitle to ""
+      
+      -- List of browsers to check
+      set browserNames to {"Safari", "Google Chrome", "Brave Browser", "Microsoft Edge", "Firefox", "Arc"}
+      
       tell application "System Events"
-        set processList to name of every process
+        set runningApps to name of every process
       end tell
 
-      if processList contains "Safari" then
-        tell application "Safari"
-          repeat with w in windows
-            repeat with t in tabs of w
-              set tabTitle to name of t
-              set tabURL to URL of t
-              set foundTitle to foundTitle & tabTitle & " | " & tabURL & "\\n"
-            end repeat
-          end repeat
-        end tell
-      end if
-
-      if processList contains "Google Chrome" then
-        tell application "Google Chrome"
-          repeat with w in windows
-            repeat with t in tabs of w
-              set tabTitle to title of t
-              set tabURL to URL of t
-              set foundTitle to foundTitle & tabTitle & " | " & tabURL & "\\n"
-            end repeat
-          end repeat
-        end tell
-      end if
+      repeat with bName in browserNames
+        if runningApps contains bName then
+          try
+            if bName is "Safari" then
+              tell application "Safari"
+                repeat with w in windows
+                  repeat with t in tabs of w
+                    set foundTitle to foundTitle & (name of t) & "\\n"
+                  end repeat
+                end repeat
+              end tell
+            else if bName is "Firefox" then
+              -- Firefox doesn't support AppleScript well for tabs, but we can get window names
+              tell application "System Events" to tell process "Firefox"
+                set foundTitle to foundTitle & (name of every window) & "\\n"
+              end tell
+            else
+              -- Chrome-based browsers (Chrome, Edge, Brave, Arc)
+              tell application bName
+                repeat with w in windows
+                  repeat with t in tabs of w
+                    set foundTitle to foundTitle & (title of t) & "\\n"
+                  end repeat
+                end repeat
+              end tell
+            end if
+          end try
+        end if
+      end repeat
       
       return foundTitle
     ''';
@@ -94,7 +106,7 @@ class NativeService {
         final output = result.stdout.toString().toLowerCase();
         for (final keyword in keywords) {
           if (output.contains(keyword.toLowerCase())) {
-            return keyword; // Return the keyword that matched
+            return keyword;
           }
         }
       }
