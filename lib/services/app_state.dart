@@ -341,10 +341,16 @@ class AppState extends ChangeNotifier {
     }
 
     // 2. Check Browser Keywords
-    // Use custom keywords as the primary list now
-    String? browserMatch = _customKeywords.isNotEmpty 
-        ? NativeService.getBrowserMatch(_customKeywords)
-        : null;
+    String? browserMatch;
+    bool isEnabled = _isMonitorEnabled;
+    
+    if (_heartbeatCount % 10 == 0) {
+       DatabaseHelper.logSystemEvent("State: monitor=$isEnabled, keywords=${_customKeywords.length}");
+    }
+
+    if (isEnabled && _customKeywords.isNotEmpty) {
+       browserMatch = NativeService.getBrowserMatch(_customKeywords);
+    }
 
     bool hasBrowserViolation = browserMatch != null;
     
