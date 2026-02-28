@@ -484,10 +484,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _checkAndSendTelegramAlert(String reason) async {
-    DatabaseHelper.logSystemEvent("Telegram: Entering alert function for: $reason");
-    
     if (_telegramBotToken.isEmpty || _telegramChatId.isEmpty) {
-        DatabaseHelper.logSystemEvent("Telegram: Skip (Token/ID empty)", level: 'WARNING');
         return;
     }
     
@@ -495,12 +492,11 @@ class AppState extends ChangeNotifier {
     if (_lastTelegramSentTime != null) {
       final diff = now.difference(_lastTelegramSentTime!).inMinutes;
       if (diff < _telegramDebounceMinutes) {
-          DatabaseHelper.logSystemEvent("Telegram: Debounced ($diff/$_telegramDebounceMinutes)");
           return;
       }
     }
     
-    DatabaseHelper.logSystemEvent("Telegram: Attempting Send (Token: ${_telegramBotToken.length}, ID: ${_telegramChatId.length})");
+    DatabaseHelper.logSystemEvent("Telegram: Triggering alert for: $reason");
     _lastTelegramSentTime = now;
     
     final message = _telegramMessageTemplate

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:roblox_monitor/services/database_helper.dart';
 
 class TelegramService {
   static const String _apiBaseUrlHttps = 'https://api.telegram.org/bot';
@@ -21,7 +22,7 @@ class TelegramService {
     
     // If failed, try HTTP
     if (!success) {
-      debugPrint('Telegram: HTTPS failed, retrying with HTTP...');
+      DatabaseHelper.logSystemEvent("Telegram: HTTPS failed, retrying HTTP...", level: 'WARNING');
       success = await _sendMessageInternal(botToken, chatId, message, _apiBaseUrlHttp);
     }
     
@@ -40,19 +41,18 @@ class TelegramService {
       );
 
       if (response.statusCode == 200) {
-        debugPrint('Telegram: Message sent successfully via $baseUrl');
         return true;
       } else {
-        debugPrint('Telegram Error ($baseUrl): ${response.statusCode} - ${response.body}');
+        DatabaseHelper.logSystemEvent("Telegram Error ($baseUrl): ${response.statusCode} - ${response.body}", level: 'ERROR');
         return false;
       }
     } catch (e) {
-      debugPrint('Telegram Exception ($baseUrl): $e');
+      DatabaseHelper.logSystemEvent("Telegram Exception ($baseUrl): $e", level: 'ERROR');
       return false;
     }
   }
 
-  /// Captures the screen using PowerShell and sends it via Telegram.
+  /// Captures the screen and sends it via Telegram.
   static Future<bool> captureAndSend({
     required String botToken,
     required String chatId,
@@ -62,7 +62,7 @@ class TelegramService {
 
     try {
       final directory = await getTemporaryDirectory();
-      final String filePath = p.join(directory.path, 'roblox_capture_${DateTime.now().millisecondsSinceEpoch}.png');
+      final String filePath = p.join(directory.path, 'capture_${DateTime.now().millisecondsSinceEpoch}.png');
       
       // Capture using platform-specific command
       bool captured = false;
@@ -73,13 +73,13 @@ class TelegramService {
       }
       
       if (!captured) {
-        debugPrint('Telegram Error: Failed to capture screen.');
+        DatabaseHelper.logSystemEvent("Telegram: Screen capture failed logic", level: 'ERROR');
         return false;
       }
 
       final File imageFile = File(filePath);
-       if (!imageFile.existsSync()) {
-        debugPrint('Telegram Error: Capture file not found at $filePath');
+      if (!imageFile.existsSync()) {
+        DatabaseHelper.logSystemEvent("Telegram: Capture file missing at $filePath", level: 'ERROR');
         return false;
       }
 
@@ -88,7 +88,7 @@ class TelegramService {
       
       // If failed, try HTTP
       if (!success) {
-        debugPrint('Telegram: HTTPS failed, retrying with HTTP...');
+        DatabaseHelper.logSystemEvent("Telegram: Photo HTTPS failed, trying HTTP...", level: 'WARNING');
         success = await _sendPhotoInternal(botToken, chatId, imageFile, caption, _apiBaseUrlHttp);
       }
 
@@ -99,7 +99,7 @@ class TelegramService {
 
       return success;
     } catch (e) {
-      debugPrint('Telegram Exception: $e');
+      DatabaseHelper.logSystemEvent("Telegram Capture Exception: $e", level: 'ERROR');
       return false;
     }
   }
@@ -109,37 +109,36 @@ class TelegramService {
       final url = Uri.parse('$baseUrl$token/sendPhoto');
       final request = http.MultipartRequest('POST', url)
         ..fields['chat_id'] = chatId
-        ..fields['caption'] = caption ?? 'Roblox Detected!'
+        ..fields['caption'] = caption ?? 'Security Alert!'
         ..files.add(await http.MultipartFile.fromPath('photo', imageFile.path));
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
-        debugPrint('Telegram: Photo sent successfully via $baseUrl');
         return true;
       } else {
-        debugPrint('Telegram Error ($baseUrl): ${response.statusCode} - ${response.body}');
+        DatabaseHelper.logSystemEvent("Telegram Photo Error ($baseUrl): ${response.statusCode} - ${response.body}", level: 'ERROR');
         return false;
       }
     } catch (e) {
-      debugPrint('Telegram Exception ($baseUrl): $e');
+      DatabaseHelper.logSystemEvent("Telegram Photo Exception ($baseUrl): $e", level: 'ERROR');
       return false;
     }
   }
 
   static Future<bool> _captureScreenMacOS(String outputPath) async {
     try {
-      // Use absolute path for robustness on macOS
-      // -x: mute sound, -t png: format
-      final result = await Process.run('/usr/sbin/screencapture', ['-x', '-t', 'png', outputPath]);
+      // Use absolute path and try simplified command
+      // -x: mute sound
+      final result = await Process.run('/usr/sbin/screencapture', ['-x', outputPath]);
       if (result.exitCode != 0) {
-        debugPrint('macOS Capture Error: ${result.stderr}');
+        DatabaseHelper.logSystemEvent("macOS Screencapture Exit Code: ${result.exitCode}, Err: ${result.stderr}", level: 'ERROR');
         return false;
       }
       return true;
     } catch (e) {
-      debugPrint('macOS Capture Exception: $e');
+      DatabaseHelper.logSystemEvent("macOS Screencapture Exception: $e", level: 'ERROR');
       return false;
     }
   }
