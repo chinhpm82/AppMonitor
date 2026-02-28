@@ -208,28 +208,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _checkAndSendTelegramAlert(String reason) async {
-    if (_telegramBotToken.isEmpty || _telegramChatId.isEmpty) return;
-
-    final now = DateTime.now();
-    if (_lastTelegramSentTime != null && 
-        now.difference(_lastTelegramSentTime!).inMinutes < _telegramDebounceMinutes) {
-      return;
-    }
-
-    _lastTelegramSentTime = now;
-    
-    String message = _telegramMessageTemplate.replaceAll('{reason}', reason);
-    message = message.replaceAll('{time}', "${now.hour}:${now.minute.toString().padLeft(2, '0')}");
-
-    // Run in background
-    TelegramService.captureAndSend(
-      botToken: _telegramBotToken,
-      chatId: _telegramChatId,
-      caption: message,
-    );
-  }
-
   Future<void> _updateTodayPlayTime() async {
     final logs = await DatabaseHelper.getLogs();
     final now = DateTime.now();
@@ -492,8 +470,6 @@ class AppState extends ChangeNotifier {
         final duration = DateTime.now().difference(_browserStartTime!).inSeconds;
         if (duration > 0) {
           String detail = browserRoblox ? (_currentRobloxTitle ?? 'Roblox Web') : (_currentBrowserTitle ?? 'YouTube');
-        if (duration > 0) {
-          String detail = browserRoblox ? (_currentRobloxTitle ?? 'Roblox Web') : (_currentBrowserTitle ?? 'YouTube');
           DatabaseHelper.logPlay(_browserStartTime!, DateTime.now(), duration, 'Trình duyệt: $detail');
           _updateTodayPlayTime();
         }
@@ -503,7 +479,39 @@ class AppState extends ChangeNotifier {
       }
     }
   }
-}
+
+  Future<void> _checkAndSendTelegramAlert(String reason) async {
+    if (_telegramBotToken.isEmpty || _telegramChatId.isEmpty) {
+        DatabaseHelper.logSystemEvent("Telegram: Skip alert (Token/ID empty)", level: 'WARNING');
+        return;
+    }
+    
+    final now = DateTime.now();
+    if (_lastTelegramSentTime != null) {
+      final diff = now.difference(_lastTelegramSentTime!).inMinutes;
+      if (diff < _telegramDebounceMinutes) {
+          return;
+      }
+    }
+    
+    DatabaseHelper.logSystemEvent("Telegram: Triggering alert for: $reason");
+    _lastTelegramSentTime = now;
+    
+    try {
+      final success = await TelegramService.captureAndSend(
+        botToken: _telegramBotToken,
+        chatId: _telegramChatId,
+        caption: _telegramMessageTemplate.replaceAll('{reason}', reason).replaceAll('{time}', "${now.hour}:${now.minute.toString().padLeft(2, '0')}"),
+      );
+      if (success) {
+        DatabaseHelper.logSystemEvent("Telegram: Alert sent successfully");
+      } else {
+        DatabaseHelper.logSystemEvent("Telegram: Failed to send capture alert", level: 'ERROR');
+      }
+    } catch (e) {
+      DatabaseHelper.logSystemEvent("Telegram Error: $e", level: 'ERROR');
+    }
+  }
 
   Future<void> setWindowMode(WindowMode mode) async {
     debugPrint("setWindowMode called with mode: $mode");

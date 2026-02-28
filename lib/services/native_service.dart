@@ -63,32 +63,35 @@ class NativeService {
 
     const script = '''
 set foundTitle to ""
--- Simple check without process lists to force prompt
+-- Check Chrome
 try
     tell application "Google Chrome"
-        set windowList to windows
-        repeat with w in windowList
-            try
-                set tabTitles to title of every tab of w
-                set AppleScript's text item delimiters to "\\n"
-                set foundTitle to foundTitle & (tabTitles as string) & "\\n"
-            end try
-        end repeat
-    end tell
-on error
-    set foundTitle to foundTitle & "CHROME_ERROR\\n"
-end try
-
-try
-    tell application "Safari"
-        repeat with w in windows
-            repeat with t in tabs of w
-                set foundTitle to foundTitle & (name of t) & "\\n"
+        set titlesList to title of tabs of every window
+        set foundTitle to foundTitle & "CHROME:"
+        repeat with windowTabs in titlesList
+            repeat with tTitle in windowTabs
+                set foundTitle to foundTitle & tTitle & "|"
             end repeat
         end repeat
+        set foundTitle to foundTitle & "\\n"
     end tell
-on error
-    set foundTitle to foundTitle & "SAFARI_ERROR\\n"
+on error errMsg
+    set foundTitle to foundTitle & "CHROME_ERR:" & errMsg & "\\n"
+end try
+
+-- Check Safari
+try
+    tell application "Safari"
+        set foundTitle to foundTitle & "SAFARI:"
+        repeat with w in windows
+            repeat with t in tabs of w
+                set foundTitle to foundTitle & (name of t) & "|"
+            end repeat
+        end repeat
+        set foundTitle to foundTitle & "\\n"
+    end tell
+on error errMsg
+    set foundTitle to foundTitle & "SAFARI_ERR:" & errMsg & "\\n"
 end try
 
 return foundTitle
@@ -104,14 +107,15 @@ return foundTitle
       
       final output = result.stdout.toString().toLowerCase();
       
-      // Log what we found (or didn't find)
-      if (output.trim().isEmpty) {
-        // Only log "Found nothing" occasionally
-        if (DateTime.now().second % 10 == 0) {
-           DatabaseHelper.logSystemEvent("Browser Check: No titles returned from osascript");
+      // Log per-browser results
+      final lines = output.split('\\n');
+      for (var line in lines) {
+        if (line.trim().isEmpty) continue;
+        if (line.contains('_err:')) {
+           DatabaseHelper.logSystemEvent("Browser Error: $line", level: 'WARNING');
+        } else if (line.contains(':') && line.split(':')[1].trim().isNotEmpty) {
+           DatabaseHelper.logSystemEvent("Found: $line");
         }
-      } else {
-        DatabaseHelper.logSystemEvent("Titles Found: ${output.replaceAll('\\n', ' ').substring(0, output.length > 50 ? 50 : output.length)}");
       }
 
       for (final keyword in keywords) {
