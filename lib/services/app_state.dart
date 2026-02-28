@@ -85,6 +85,7 @@ class AppState extends ChangeNotifier {
   String get telegramMessageTemplate => _telegramMessageTemplate;
 
   AppState() {
+    DatabaseHelper.logSystemEvent("MoniGuard App Started");
     _loadSettings();
     _startMonitor();
     _updateTodayPlayTime();
