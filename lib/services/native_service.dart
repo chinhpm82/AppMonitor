@@ -57,64 +57,68 @@ class NativeService {
   static String? _getMacOSBrowserMatch(List<String> keywords) {
     if (keywords.isEmpty) return null;
 
-    final script = '''
-      set foundTitle to ""
-      
-      -- List of browsers to check
-      set browserNames to {"Safari", "Google Chrome", "Brave Browser", "Microsoft Edge", "Firefox", "Arc"}
-      
-      tell application "System Events"
-        set runningApps to name of every process
-      end tell
+    const script = '''
+set foundTitle to ""
+-- List of browsers to check
+set browserNames to {"Safari", "Google Chrome", "Brave Browser", "Microsoft Edge", "Firefox", "Arc"}
 
-      repeat with bName in browserNames
-        if runningApps contains bName then
-          try
-            if bName is "Safari" then
-              tell application "Safari"
-                repeat with w in windows
-                  repeat with t in tabs of w
-                    set foundTitle to foundTitle & (name of t) & "\\n"
-                  end repeat
-                end repeat
-              end tell
-            else if bName is "Firefox" then
-              -- Firefox doesn't support AppleScript well for tabs, but we can get window names
-              tell application "System Events" to tell process "Firefox"
-                set foundTitle to foundTitle & (name of every window) & "\\n"
-              end tell
-            else
-              -- Chrome-based browsers (Chrome, Edge, Brave, Arc)
-              tell application bName
-                set windowList to windows
-                repeat with w in windowList
-                  try
-                    set tabTitles to title of every tab of w
-                    set AppleScript's text item delimiters to "\\n"
-                    set foundTitle to foundTitle & (tabTitles as string) & "\\n"
-                  end try
-                end repeat
-              end tell
-            end if
-          end try
-        end if
-      end repeat
-      
-      return foundTitle
-    ''';
+tell application "System Events"
+	set runningApps to name of every process
+end tell
+
+repeat with bName in browserNames
+	if runningApps contains bName then
+		try
+			if bName is "Safari" then
+				tell application "Safari"
+					repeat with w in windows
+						repeat with t in tabs of w
+							set foundTitle to foundTitle & (name of t) & "\\n"
+						end repeat
+					end repeat
+				end tell
+			else if bName is "Firefox" then
+				tell application "System Events" to tell process "Firefox"
+					set foundTitle to foundTitle & (name of every window) & "\\n"
+				end tell
+			else
+				-- Chrome-based (Chrome, Edge, Brave, Arc)
+				tell application bName
+					set titlesList to title of tabs of every window
+					repeat with windowTabs in titlesList
+						repeat with tTitle in windowTabs
+							set foundTitle to foundTitle & tTitle & "\\n"
+						end repeat
+					end repeat
+				end tell
+			end if
+		on error
+			-- Ignore errors for specific browsers
+		end try
+	end if
+end repeat
+
+return foundTitle
+''';
 
     try {
       final result = Process.runSync('osascript', ['-e', script]);
-      if (result.exitCode == 0) {
-        final output = result.stdout.toString().toLowerCase();
-        for (final keyword in keywords) {
-          if (output.contains(keyword.toLowerCase())) {
-            return keyword;
-          }
+      if (result.exitCode != 0) {
+        debugPrint("AppleScript Exec Error: \${result.stderr}");
+        return null;
+      }
+      
+      final output = result.stdout.toString().toLowerCase();
+      if (output.trim().isEmpty) return null;
+
+      for (final keyword in keywords) {
+        if (keyword.trim().isEmpty) continue;
+        if (output.contains(keyword.toLowerCase())) {
+          return keyword;
         }
       }
     } catch (e) {
-      debugPrint("MacOS Browser Check Error: $e");
+      debugPrint("MacOS Browser Check Error: \$e");
     }
     return null;
   }

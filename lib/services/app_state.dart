@@ -305,21 +305,27 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  int _heartbeatCount = 0;
+
   void _checkStatus() {
     if (_isChecking) return;
     _isChecking = true;
     
     try {
       _performCheck();
-    } catch (e) {
-      DatabaseHelper.logSystemEvent("Monitoring Error: $e", level: 'ERROR');
+    } catch (e, stack) {
+      DatabaseHelper.logSystemEvent("Critical Monitoring Error: $e\n$stack", level: 'ERROR');
     } finally {
       _isChecking = false;
     }
   }
 
   void _performCheck() {
-    // DatabaseHelper.logSystemEvent("Periodic check started"); // Too noisy for every second
+    _heartbeatCount++;
+    if (_heartbeatCount % 30 == 0) { // Every 30 seconds
+       DatabaseHelper.logSystemEvent("Heartbeat: Loop is active (Cycle $_heartbeatCount)");
+    }
+    
     // 1. Check Desktop Apps
     bool robloxNow = NativeService.isProcessRunning(Constants.robloxProcessName);
     bool customAppNow = false;
