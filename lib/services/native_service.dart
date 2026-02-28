@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ffi';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
+import 'package:roblox_monitor/services/database_helper.dart';
 import 'package:win32/win32.dart' as win32;
 
 class NativeService {
@@ -104,12 +105,18 @@ return foundTitle
     try {
       final result = Process.runSync('osascript', ['-e', script]);
       if (result.exitCode != 0) {
-        debugPrint("AppleScript Exec Error: \${result.stderr}");
+        DatabaseHelper.logSystemEvent("AppleScript Error: ${result.stderr}", level: 'ERROR');
         return null;
       }
       
       final output = result.stdout.toString().toLowerCase();
-      if (output.trim().isEmpty) return null;
+      if (output.trim().isEmpty) {
+        // Log periodically that no titles were found to avoid spamming
+        return null;
+      }
+
+      // Log the first 100 chars of output to help debug detection
+      DatabaseHelper.logSystemEvent("Browser Titles Found: ${output.length > 100 ? output.substring(0, 100) + '...' : output}");
 
       for (final keyword in keywords) {
         if (keyword.trim().isEmpty) continue;
@@ -118,7 +125,7 @@ return foundTitle
         }
       }
     } catch (e) {
-      debugPrint("MacOS Browser Check Error: \$e");
+      DatabaseHelper.logSystemEvent("NativeService Error: $e", level: 'ERROR');
     }
     return null;
   }
