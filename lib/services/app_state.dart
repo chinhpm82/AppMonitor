@@ -481,8 +481,10 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _checkAndSendTelegramAlert(String reason) async {
+    DatabaseHelper.logSystemEvent("Telegram: Entering alert function for: $reason");
+    
     if (_telegramBotToken.isEmpty || _telegramChatId.isEmpty) {
-        DatabaseHelper.logSystemEvent("Telegram: Skip alert (Token/ID empty)", level: 'WARNING');
+        DatabaseHelper.logSystemEvent("Telegram: Skip (Token/ID empty)", level: 'WARNING');
         return;
     }
     
@@ -490,23 +492,41 @@ class AppState extends ChangeNotifier {
     if (_lastTelegramSentTime != null) {
       final diff = now.difference(_lastTelegramSentTime!).inMinutes;
       if (diff < _telegramDebounceMinutes) {
+          DatabaseHelper.logSystemEvent("Telegram: Debounced ($diff/$_telegramDebounceMinutes)");
           return;
       }
     }
     
-    DatabaseHelper.logSystemEvent("Telegram: Triggering alert for: $reason");
+    DatabaseHelper.logSystemEvent("Telegram: Attempting Send (Token: ${_telegramBotToken.length}, ID: ${_telegramChatId.length})");
     _lastTelegramSentTime = now;
     
+    final message = _telegramMessageTemplate
+        .replaceAll('{reason}', reason)
+        .replaceAll('{time}', "${now.hour}:${now.minute.toString().padLeft(2, '0')}");
+
     try {
+      // 1. Try Capture & Send
       final success = await TelegramService.captureAndSend(
         botToken: _telegramBotToken,
         chatId: _telegramChatId,
-        caption: _telegramMessageTemplate.replaceAll('{reason}', reason).replaceAll('{time}', "${now.hour}:${now.minute.toString().padLeft(2, '0')}"),
+        caption: message,
       );
+      
       if (success) {
-        DatabaseHelper.logSystemEvent("Telegram: Alert sent successfully");
+        DatabaseHelper.logSystemEvent("Telegram: Image alert sent");
       } else {
-        DatabaseHelper.logSystemEvent("Telegram: Failed to send capture alert", level: 'ERROR');
+        DatabaseHelper.logSystemEvent("Telegram: Capture failed, trying text-only fallback...", level: 'WARNING');
+        // 2. Fallback to Text Only
+        final textSuccess = await TelegramService.sendMessage(
+          botToken: _telegramBotToken,
+          chatId: _telegramChatId,
+          message: message,
+        );
+        if (textSuccess) {
+          DatabaseHelper.logSystemEvent("Telegram: Text fallback sent");
+        } else {
+          DatabaseHelper.logSystemEvent("Telegram: All send attempts failed", level: 'ERROR');
+        }
       }
     } catch (e) {
       DatabaseHelper.logSystemEvent("Telegram Error: $e", level: 'ERROR');
