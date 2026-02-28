@@ -19,6 +19,9 @@ class AppState extends ChangeNotifier {
   String? _currentRobloxTitle; 
   String? _currentBrowserTitle;
   
+  bool _wasAppDetected = false;
+  bool _wasBrowserDetected = false;
+  
   DateTime? _robloxStartTime;
   DateTime? _browserStartTime;
 
@@ -300,11 +303,6 @@ class AppState extends ChangeNotifier {
   }
 
   void _performCheck() {
-    _heartbeatCount++;
-    if (_heartbeatCount % 60 == 0) { // Every 60 seconds
-       DatabaseHelper.logSystemEvent("Heartbeat: Active (Cycle $_heartbeatCount)");
-    }
-    
     // 1. Check Desktop Apps
     bool robloxNow = NativeService.isProcessRunning(Constants.robloxProcessName);
     bool customAppNow = false;
@@ -322,10 +320,6 @@ class AppState extends ChangeNotifier {
     String? browserMatch;
     bool isEnabled = _isMonitorEnabled;
     
-    if (_heartbeatCount % 10 == 0) {
-       DatabaseHelper.logSystemEvent("State: monitor=$isEnabled, keywords=${_customKeywords.length}");
-    }
-
     if (isEnabled && _customKeywords.isNotEmpty) {
        final match = NativeService.getBrowserMatch(_customKeywords);
        if (match != null) {
@@ -346,20 +340,22 @@ class AppState extends ChangeNotifier {
     _handleLogging(robloxNow || customAppNow, isRobloxWeb, hasBrowserViolation && !isRobloxWeb);
     
     // Check Telegram Notification
-    // Check Telegram Notification
-    if (robloxNow) {
+    if (robloxNow && !_wasAppDetected) {
        DatabaseHelper.logSystemEvent("Detected Roblox App");
        _checkAndSendTelegramAlert(t('msg_roblox_app'));
-    } else if (customAppNow) {
+    } else if (customAppNow && !_wasAppDetected) {
        DatabaseHelper.logSystemEvent("Detected Custom App: $foundCustomAppName");
        _checkAndSendTelegramAlert(t('msg_restricted_app', args: [foundCustomAppName ?? '']));
-    } else if (isRobloxWeb) {
+    } else if (isRobloxWeb && !_wasBrowserDetected) {
        DatabaseHelper.logSystemEvent("Detected Roblox Web: $_currentRobloxTitle");
        _checkAndSendTelegramAlert(t('msg_roblox_web', args: [_currentRobloxTitle ?? '']));
-    } else if (hasBrowserViolation) {
+    } else if (hasBrowserViolation && !_wasBrowserDetected) {
        DatabaseHelper.logSystemEvent("Detected Restricted Web: $browserMatch");
        _checkAndSendTelegramAlert(t('msg_restricted_web', args: [browserMatch ?? '']));
     }
+
+    _wasAppDetected = robloxNow || customAppNow;
+    _wasBrowserDetected = hasBrowserViolation;
 
     if (!_isMonitorEnabled) {
        _resetViolations();

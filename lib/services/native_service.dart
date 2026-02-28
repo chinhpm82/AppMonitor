@@ -107,17 +107,6 @@ return foundTitle
       
       final output = result.stdout.toString().toLowerCase();
       
-      // Log per-browser results
-      final lines = output.split('\\n');
-      for (var line in lines) {
-        if (line.trim().isEmpty) continue;
-        if (line.contains('_err:')) {
-           DatabaseHelper.logSystemEvent("Browser Error: $line", level: 'WARNING');
-        } else if (line.contains(':') && line.split(':')[1].trim().isNotEmpty) {
-           DatabaseHelper.logSystemEvent("Found: $line");
-        }
-      }
-
       for (final keyword in keywords) {
         if (keyword.trim().isEmpty) continue;
         if (output.contains(keyword.toLowerCase())) {

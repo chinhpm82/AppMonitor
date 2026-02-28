@@ -129,16 +129,28 @@ class TelegramService {
 
   static Future<bool> _captureScreenMacOS(String outputPath) async {
     try {
-      // Use absolute path and try simplified command
-      // -x: mute sound
-      final result = await Process.run('/usr/sbin/screencapture', ['-x', outputPath]);
+      DatabaseHelper.logSystemEvent("macOS: Starting capture to $outputPath");
+      
+      // Use absolute path for robustness on macOS
+      final result = await Process.run('/usr/sbin/screencapture', ['-x', '-t', 'png', outputPath]);
+      
       if (result.exitCode != 0) {
-        DatabaseHelper.logSystemEvent("macOS Screencapture Exit Code: ${result.exitCode}, Err: ${result.stderr}", level: 'ERROR');
+        DatabaseHelper.logSystemEvent("macOS: screencapture failed (code ${result.exitCode}). Stderr: ${result.stderr}", level: 'ERROR');
         return false;
       }
-      return true;
+      
+      // Verify file exists and has size
+      final file = File(outputPath);
+      if (await file.exists()) {
+        final size = await file.length();
+        DatabaseHelper.logSystemEvent("macOS: Capture saved ($size bytes)");
+        return size > 0;
+      } else {
+        DatabaseHelper.logSystemEvent("macOS: screencapture returned 0 but file missing", level: 'ERROR');
+        return false;
+      }
     } catch (e) {
-      DatabaseHelper.logSystemEvent("macOS Screencapture Exception: $e", level: 'ERROR');
+      DatabaseHelper.logSystemEvent("macOS: Capture exception: $e", level: 'ERROR');
       return false;
     }
   }
